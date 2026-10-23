@@ -1,0 +1,38 @@
+# macOS metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Xcode user and build state
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcodeproj/xcuserdata/
+
+# Local build products
+dist/
+*.app/
+*.dSYM/
+
+# Release binaries are uploaded to GitHub Releases, not committed to git.
+release/*.zip
+release/*.dmg
+release/*.sha256
+
+# Local signing and secret material
+*.p12
+*.cer
+*.mobileprovision
+.env
+.env.*
+!.env.example
+
+# Temporary logs and test output
+*.log
+test-results/
+coverage/

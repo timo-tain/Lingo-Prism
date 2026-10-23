@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>zh-Hant</string>
+    <key>CFBundleDisplayName</key>
+    <string>Lingo Prism</string>
+    <key>CFBundleExecutable</key>
+    <string>LingoPrism</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.example.lingoprism</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Lingo Prism</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+	<string>0.3.0</string>
+    <key>CFBundleVersion</key>
+	<string>21</string>
+    <key>CFBundleIconFile</key>
+    <string>LingoPrism.icns</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>Lingo Prism 只會在你啟動翻譯時擷取你選取的螢幕區域，以辨識並翻譯其中的文字。</string>
+</dict>
+</plist>

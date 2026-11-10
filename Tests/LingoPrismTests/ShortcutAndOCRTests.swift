@@ -93,6 +93,25 @@ struct ShortcutAndOCRTests {
         }
     }
 
+    @Test func translationTestDurationUsesMillisecondsSuffix() {
+        #expect(
+            AppLocalizer.format(.testDurationFormat, 123, language: .traditionalChinese)
+                == "（耗時 123 毫秒）"
+        )
+    }
+
+    @Test func privacyPermissionCatalogProvidesSystemSettingsFlows() {
+        #expect(PrivacyPermission.allCases == [.screenRecording, .accessibility])
+        #expect(PrivacyPermission.screenRecording.tccService == "ScreenCapture")
+        #expect(PrivacyPermission.accessibility.tccService == "Accessibility")
+        for permission in PrivacyPermission.allCases {
+            #expect(permission.settingsURL.scheme == "x-apple.systempreferences")
+        }
+        #expect(AppLocalizer.privacy(.title, language: .traditionalChinese) == "隱私權授權")
+        #expect(AppLocalizer.privacy(.requestPermission, language: .traditionalChinese) == "授權")
+        #expect(!AppLocalizer.privacy(.resetPermission, language: .english).isEmpty)
+    }
+
     @Test func visionStatusCoversEveryLanguageTheAppCanRequest() {
         let statuses = VisionLanguageCatalog.statuses()
         #expect(statuses.map(\.language) == AppLanguage.allCases.filter { $0 != .auto })
@@ -108,12 +127,21 @@ struct ShortcutAndOCRTests {
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
+        let defaultsAppearance = BorderAppearance.current(defaults: defaults)
+        #expect(defaultsAppearance.primaryColor == "#A8EAFA")
+        #expect(defaultsAppearance.secondaryColor == "#7651FF")
+        #expect(defaultsAppearance.tertiaryColor == "#F052D1")
+        #expect(defaultsAppearance.strokeWidth == 1)
+        #expect(defaultsAppearance.glowWidth == 14)
+        #expect(defaultsAppearance.animationSpeed == 1)
+
         let preferences = PreferencesStore(defaults: defaults)
         preferences.borderPrimaryColor = "#123456"
         preferences.borderSecondaryColor = "#654321"
         preferences.borderTertiaryColor = "#ABCDEF"
         preferences.borderStrokeWidth = 4.5
         preferences.borderGlowWidth = 18
+        preferences.borderAnimationSpeed = 1.25
 
         let appearance = BorderAppearance.current(defaults: defaults)
         #expect(appearance.primaryColor == "#123456")
@@ -121,6 +149,8 @@ struct ShortcutAndOCRTests {
         #expect(appearance.tertiaryColor == "#ABCDEF")
         #expect(appearance.strokeWidth == 4.5)
         #expect(appearance.glowWidth == 18)
+        #expect(appearance.animationSpeed == 1.25)
+        #expect(AppLocalizer.debug(.animationSpeed, language: .traditionalChinese) == "流光速度")
         #expect(!AppLocalizer.debug(.title, language: .traditionalChinese).isEmpty)
     }
 

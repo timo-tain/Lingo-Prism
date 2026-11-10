@@ -21,6 +21,22 @@ enum LingoPrismBrandAsset {
     }
 }
 
+enum LingoPrismMenuBarAsset {
+    static func image(size: CGFloat? = nil) -> NSImage {
+        let image: NSImage
+        if let url = Bundle.main.url(forResource: "LingoPrismMenuBar", withExtension: "png"),
+           let bundled = NSImage(contentsOf: url) {
+            image = bundled
+        } else {
+            image = NSImage(size: NSSize(width: 1, height: 1))
+        }
+        guard let size else { return image }
+        let copy = image.copy() as? NSImage ?? image
+        copy.size = NSSize(width: size, height: size)
+        return copy
+    }
+}
+
 struct LingoPrismBrandIcon: View {
     let size: CGFloat
     var cornerRadius: CGFloat? = nil
@@ -34,6 +50,22 @@ struct LingoPrismBrandIcon: View {
             .scaledToFit()
             .frame(width: size, height: size)
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius ?? size * 0.19, style: .continuous))
+            .accessibilityHidden(true)
+    }
+}
+
+/// The menu-bar status area uses a background-free white mark so it remains
+/// legible over both light and dark menu bars. The full-color app mark remains
+/// reserved for the popup, settings header, and application icon.
+struct LingoPrismMenuBarIcon: View {
+    let size: CGFloat
+
+    var body: some View {
+        Image(nsImage: LingoPrismMenuBarAsset.image(size: size))
+            .resizable()
+            .interpolation(.high)
+            .scaledToFit()
+            .frame(width: size, height: size)
             .accessibilityHidden(true)
     }
 }

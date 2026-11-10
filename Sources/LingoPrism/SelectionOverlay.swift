@@ -306,7 +306,10 @@ final class SelectionCanvasView: NSView {
     }
 
     @objc private func advanceBorderAnimation(_ timer: Timer) {
-        borderPhase = (borderPhase + 0.014).truncatingRemainder(dividingBy: 1)
+        // The debug panel exposes the speed in full colour cycles per second.
+        // The timer runs at 30 FPS, so convert that rate to a per-frame phase step.
+        let speed = BorderAppearance.current().animationSpeed
+        borderPhase = (borderPhase + speed / 30).truncatingRemainder(dividingBy: 1)
         needsDisplay = true
     }
 

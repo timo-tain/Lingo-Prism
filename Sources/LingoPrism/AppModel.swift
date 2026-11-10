@@ -1,5 +1,4 @@
 import AppKit
-import ApplicationServices
 import Combine
 import SwiftUI
 
@@ -13,10 +12,13 @@ final class AppModel: ObservableObject {
 
     let preferences = PreferencesStore()
     let launchAtLogin = LaunchAtLoginService()
+    let privacyPermissions = PrivacyPermissionStore()
     private let hotkeyMonitor = HotkeyMonitor()
+    private var menuBarController: MenuBarStatusController?
     private var didStart = false
     private var preferencesObserver: AnyCancellable?
     private var hotkeyObserver: AnyCancellable?
+    private var privacyPermissionObserver: AnyCancellable?
 
     init() {
         preferencesObserver = preferences.objectWillChange.sink { [weak self] _ in
@@ -28,6 +30,9 @@ final class AppModel: ObservableObject {
                 guard let self else { return }
                 self.hotkeyMonitor.update(shortcut: self.preferences.effectiveHotkey)
             }
+        privacyPermissionObserver = privacyPermissions.$accessibilityAuthorized
+            .sink { [weak self] authorized in self?.hotkeyEnabled = authorized }
+        menuBarController = MenuBarStatusController(model: self)
         // A menu-bar-only app has no dashboard window lifecycle. Start the
         // global shortcut when the shared model is created instead.
         start()
@@ -36,7 +41,9 @@ final class AppModel: ObservableObject {
     func start() {
         guard !didStart else { return }
         didStart = true
-        hotkeyEnabled = AXIsProcessTrusted()
+        _ = AppUpdater.shared
+        privacyPermissions.refresh()
+        hotkeyEnabled = privacyPermissions.accessibilityAuthorized
         hotkeyMonitor.start(shortcut: preferences.effectiveHotkey) { [weak self] in
             Task { @MainActor in self?.beginSelection() }
         }
@@ -53,18 +60,19 @@ final class AppModel: ObservableObject {
     }
 
     func requestAccessibilityPermission() {
-        // The SDK currently imports kAXTrustedCheckOptionPrompt as mutable global state.
-        // Its documented key string avoids crossing that Swift 6 concurrency boundary.
-        let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
-        _ = AXIsProcessTrustedWithOptions(options)
-        hotkeyEnabled = AXIsProcessTrusted()
+        privacyPermissions.request(.accessibility)
+        hotkeyEnabled = privacyPermissions.accessibilityAuthorized
         status = hotkeyEnabled
             ? AppLocalizer.text(.statusAccessibilityEnabled)
             : AppLocalizer.text(.statusAccessibilityDisabled)
     }
 
     func openSettings() {
-        SettingsWindowController.shared.show(preferences: preferences, launchAtLogin: launchAtLogin)
+        SettingsWindowController.shared.show(
+            preferences: preferences,
+            launchAtLogin: launchAtLogin,
+            permissions: privacyPermissions
+        )
     }
 
     func beginSelection() {
@@ -84,6 +92,13 @@ final class AppModel: ObservableObject {
                 self.isSelecting = false
                 guard let selection else {
                     self.status = AppLocalizer.text(.statusSelectionCancelled)
+                    return
+                }
+                if self.preferences.engine == .macOS, self.preferences.sourceLanguage == .auto {
+                    let message = AppLocalizer.selfHosted(.chooseSourceLanguage)
+                    self.status = message
+                    SelectionOverlayController.shared.dismiss()
+                    CursorHintController.shared.show(message, anchoredTo: selection.screenRect)
                     return
                 }
                 self.translate(selection)
@@ -147,9 +162,9 @@ final class AppModel: ObservableObject {
                     SelectionOverlayController.shared.dismiss()
                     if case TranslationError.noText = error {
                         self.status = AppLocalizer.noTextHint()
-                        CursorHintController.shared.show(AppLocalizer.noTextHint())
+                        CursorHintController.shared.show(AppLocalizer.noTextHint(), anchoredTo: selection.screenRect)
                     } else {
-                        self.present(error)
+                        self.present(error, anchoredTo: selection.screenRect)
                     }
                 }
             }
@@ -192,11 +207,11 @@ final class AppModel: ObservableObject {
         NSPasteboard.general.setString(text, forType: .string)
     }
 
-    private func present(_ error: Error) {
+    private func present(_ error: Error, anchoredTo selectionRect: CGRect? = nil) {
         isProcessing = false
         SelectionOverlayController.shared.dismiss()
         status = AppLocalizer.text(.couldNotTranslate)
-        CursorHintController.shared.show(error.localizedDescription)
+        CursorHintController.shared.show(error.localizedDescription, anchoredTo: selectionRect)
     }
 }
 

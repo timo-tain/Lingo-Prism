@@ -54,7 +54,7 @@ struct SelectionCanvasTests {
         #expect(outside.redComponent > 0.95) // fully transparent outside the selection
         #expect(inside.redComponent > 0.95) // fully transparent selected region
         #expect(max(border.redComponent, border.greenComponent, border.blueComponent)
-            - min(border.redComponent, border.greenComponent, border.blueComponent) > 0.2) // static blue-purple final-style edge
+            - min(border.redComponent, border.greenComponent, border.blueComponent) > 0.1) // static coloured final-style edge
     }
 
     @Test func usesFinalEventLocationEvenWithoutIntermediateDragEvents() throws {
@@ -125,7 +125,7 @@ struct SelectionCanvasTests {
         let loadingCard = try #require(bitmap.colorAt(x: 300, y: 120)?.usingColorSpace(.deviceRGB))
         #expect(loadingInterior.redComponent > 0.95)
         #expect(max(retainedBorder.redComponent, retainedBorder.greenComponent, retainedBorder.blueComponent)
-            - min(retainedBorder.redComponent, retainedBorder.greenComponent, retainedBorder.blueComponent) > 0.2)
+            - min(retainedBorder.redComponent, retainedBorder.greenComponent, retainedBorder.blueComponent) > 0.1)
         #expect(loadingCard.redComponent < 0.8)
 
         // A second gesture or Esc cannot discard the still-processing region.

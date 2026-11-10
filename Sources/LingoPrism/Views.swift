@@ -11,7 +11,7 @@ struct MenuBarView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                LingoPrismBrandIcon(size: 20, cornerRadius: 5)
+                LingoPrismMenuBarIcon(size: 20)
                 Text("Lingo Prism")
                     .font(.headline)
             }
@@ -27,6 +27,25 @@ struct MenuBarView: View {
             }
             .buttonStyle(.borderedProminent)
             .disabled(model.isProcessing)
+
+            HStack(spacing: 8) {
+                quickLanguagePicker(
+                    t(.sourceLanguage),
+                    selection: Binding(
+                        get: { model.preferences.sourceLanguage },
+                        set: { model.preferences.sourceLanguage = $0 }
+                    ),
+                    languages: AppLanguage.allCases
+                )
+                quickLanguagePicker(
+                    t(.targetLanguage),
+                    selection: Binding(
+                        get: { model.preferences.targetLanguage },
+                        set: { model.preferences.targetLanguage = $0 }
+                    ),
+                    languages: AppLanguage.allCases.filter { $0 != .auto }
+                )
+            }
 
             Divider()
             HStack {
@@ -44,11 +63,36 @@ struct MenuBarView: View {
         }
         .environment(\.locale, Locale(identifier: model.preferences.interfaceLanguage.localeIdentifier))
     }
+
+    private func quickLanguagePicker(
+        _ title: String,
+        selection: Binding<AppLanguage>,
+        languages: [AppLanguage]
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Picker(title, selection: selection) {
+                ForEach(languages) { language in
+                    Text(language.title).tag(language)
+                }
+            }
+            .labelsHidden()
+            .controlSize(.small)
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func t(_ key: AppLocalizer.Key) -> String {
+        AppLocalizer.text(key, language: model.preferences.interfaceLanguage)
+    }
 }
 
 struct SettingsView: View {
     @ObservedObject var preferences: PreferencesStore
     @ObservedObject var launchAtLogin: LaunchAtLoginService
+    @ObservedObject var permissions: PrivacyPermissionStore
     @State private var ollamaStatus: String?
     @State private var isCheckingOllama = false
     @State private var selfHostedStatus: String?
@@ -63,6 +107,9 @@ struct SettingsView: View {
     @State private var debugIconTapCount = 0
     @State private var lastDebugIconTap: Date?
     @State private var isDebugPanelVisible = false
+    @State private var isUpdateSimulationPresented = false
+    @State private var debugPermissionMessage: String?
+    @State private var debugCopyMessage: String?
 
     var body: some View {
         ZStack {
@@ -72,6 +119,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     appHeader
                     generalSection
+                    privacySection
                     translationSection
                     shortcutSection
                     ocrSection
@@ -91,6 +139,9 @@ struct SettingsView: View {
         .preferredColorScheme(.dark)
         .environment(\.locale, Locale(identifier: preferences.interfaceLanguage.localeIdentifier))
         .background(SettingsWindowConfigurator())
+        .sheet(isPresented: $isUpdateSimulationPresented) {
+            UpdateFlowSimulationView(language: preferences.interfaceLanguage)
+        }
         .background {
             if #available(macOS 15.0, *) {
                 SystemTranslationDownloadAnchor(
@@ -103,8 +154,12 @@ struct SettingsView: View {
         }
         .onAppear {
             launchAtLogin.refresh()
+            permissions.refresh()
             refreshOCRLanguages()
             refreshSystemTranslationLanguages()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            permissions.refresh()
         }
         .onChange(of: preferences.engine) { _, _ in
             translationTestTask?.cancel()
@@ -123,10 +178,8 @@ struct SettingsView: View {
     private var appHeader: some View {
         VStack(spacing: 9) {
             Button(action: registerDebugIconTap) {
-                LingoPrismBrandIcon(size: 64, cornerRadius: 17)
+                LingoPrismBrandIcon(size: 82, cornerRadius: 22)
                     .frame(width: 82, height: 82)
-                    .background(.black.opacity(0.54), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                    .shadow(color: .black.opacity(0.25), radius: 12, y: 6)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Lingo Prism")
@@ -163,13 +216,25 @@ struct SettingsView: View {
                 )
                 Divider().overlay(.white.opacity(0.09))
                 SettingsRow(icon: "character.bubble", tint: .cyan, title: t(.interfaceLanguage), subtitle: t(.interfaceLanguageSubtitle)) {
-                    Picker(t(.interfaceLanguage), selection: $preferences.interfaceLanguage) {
-                        ForEach(AppInterfaceLanguage.allCases) { language in
-                            Text(language.pickerTitle).tag(language)
+                    RightAlignedControl {
+                        Picker(t(.interfaceLanguage), selection: $preferences.interfaceLanguage) {
+                            ForEach(AppInterfaceLanguage.allCases) { language in
+                                Text(language.pickerTitle).tag(language)
+                            }
                         }
+                        .labelsHidden()
                     }
-                    .labelsHidden()
-                    .frame(width: 160)
+                }
+                Divider().overlay(.white.opacity(0.09))
+                SettingsRow(icon: "arrow.down.circle", tint: .green, title: t(.checkForUpdates), subtitle: appVersion) {
+                    Button {
+                        AppUpdater.shared.checkForUpdates()
+                    } label: {
+                        Image(systemName: "arrow.up.right")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .accessibilityLabel(t(.checkForUpdates))
                 }
             }
         }
@@ -187,22 +252,30 @@ struct SettingsView: View {
                     languagePicker(t(.targetLanguage), selection: $preferences.targetLanguage, languages: AppLanguage.allCases.filter { $0 != .auto })
                 }
                 .padding(.top, 10)
+                if preferences.engine == .macOS, preferences.sourceLanguage == .auto {
+                    Text(AppLocalizer.selfHosted(.chooseSourceLanguage, language: preferences.interfaceLanguage))
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .padding(.top, 6)
+                }
                 Divider().overlay(.white.opacity(0.09)).padding(.top, 10)
                 // Keep engine and presentation in one continuous card, like
                 // the reference, rather than giving every option its own box.
                 SettingsRow(icon: "globe", tint: .purple, title: t(.translationEngine), subtitle: t(.translationEngineSubtitle)) {
-                    Picker(t(.translationEngine), selection: $preferences.engine) {
-                        ForEach(TranslationEngine.allCases) { engine in Text(engine.title).tag(engine) }
+                    RightAlignedControl {
+                        Picker(t(.translationEngine), selection: $preferences.engine) {
+                            ForEach(TranslationEngine.allCases) { engine in Text(engine.title).tag(engine) }
+                        }
+                        .labelsHidden()
                     }
-                    .labelsHidden()
-                    .frame(width: 160)
                 }
                 SettingsRow(icon: "rectangle.inset.filled", tint: .blue, title: t(.resultDisplay), subtitle: preferences.presentation.description) {
-                    Picker(t(.resultDisplay), selection: $preferences.presentation) {
-                        ForEach(TranslationPresentation.allCases) { mode in Text(mode.title).tag(mode) }
+                    RightAlignedControl {
+                        Picker(t(.resultDisplay), selection: $preferences.presentation) {
+                            ForEach(TranslationPresentation.allCases) { mode in Text(mode.title).tag(mode) }
+                        }
+                        .labelsHidden()
                     }
-                    .labelsHidden()
-                    .frame(width: 150)
                 }
                 if preferences.engine == .ollama {
                     Divider().overlay(.white.opacity(0.09))
@@ -210,9 +283,10 @@ struct SettingsView: View {
                         TextField(t(.ollamaURL), text: $preferences.ollamaURL)
                         TextField(t(.ollamaModel), text: $preferences.ollamaModel)
                         HStack {
+                            if let ollamaStatus { Text(ollamaStatus).foregroundStyle(.white.opacity(0.58)) }
+                            Spacer()
                             Button(isCheckingOllama ? t(.checking) : t(.testOllama)) { checkOllama() }
                                 .disabled(isCheckingOllama)
-                            if let ollamaStatus { Text(ollamaStatus).foregroundStyle(.white.opacity(0.58)) }
                         }
                         .font(.caption)
                     }
@@ -226,20 +300,22 @@ struct SettingsView: View {
                             Text(AppLocalizer.selfHosted(.endpoint, language: preferences.interfaceLanguage))
                                 .foregroundStyle(.white.opacity(0.64))
                             Spacer()
-                            Picker(AppLocalizer.selfHosted(.endpoint, language: preferences.interfaceLanguage), selection: selfHostedPresetBinding) {
-                                ForEach(SelfHostedEndpointPreset.allCases) { preset in Text(preset.title).tag(preset) }
+                            RightAlignedControl {
+                                Picker(AppLocalizer.selfHosted(.endpoint, language: preferences.interfaceLanguage), selection: selfHostedPresetBinding) {
+                                    ForEach(SelfHostedEndpointPreset.allCases) { preset in Text(preset.title).tag(preset) }
+                                }
+                                .labelsHidden()
                             }
-                            .labelsHidden()
-                            .frame(width: 150)
                         }
                         TextField(AppLocalizer.selfHosted(.endpoint, language: preferences.interfaceLanguage), text: $preferences.selfHostedURL)
                         TextField(AppLocalizer.selfHosted(.model, language: preferences.interfaceLanguage), text: $preferences.selfHostedModel)
                         HStack {
+                            if let selfHostedStatus { Text(selfHostedStatus).foregroundStyle(.white.opacity(0.58)) }
+                            Spacer()
                             Button(isCheckingSelfHosted ? t(.checking) : AppLocalizer.selfHosted(.testConnection, language: preferences.interfaceLanguage)) {
                                 checkSelfHostedEndpoint()
                             }
                             .disabled(isCheckingSelfHosted)
-                            if let selfHostedStatus { Text(selfHostedStatus).foregroundStyle(.white.opacity(0.58)) }
                         }
                         .font(.caption)
                     }
@@ -252,17 +328,6 @@ struct SettingsView: View {
                 }
                 Divider().overlay(.white.opacity(0.09))
                 HStack {
-                    Button(translationTestTask == nil ? t(.testTranslation) : t(.cancelTest)) {
-                            if let task = translationTestTask {
-                                task.cancel()
-                                translationTestTask = nil
-                                serviceStatus = nil
-                            } else {
-                                testTranslation()
-                            }
-                        }
-                    if translationTestTask != nil { ProgressView().controlSize(.small) }
-                    Spacer()
                     if let serviceStatus {
                         Text(serviceStatus)
                             .font(.caption)
@@ -270,10 +335,67 @@ struct SettingsView: View {
                             .lineLimit(2)
                             .textSelection(.enabled)
                     }
+                    Spacer()
+                    if translationTestTask != nil { ProgressView().controlSize(.small) }
+                    Button(translationTestTask == nil ? t(.testTranslation) : t(.cancelTest)) {
+                        if let task = translationTestTask {
+                            task.cancel()
+                            translationTestTask = nil
+                            serviceStatus = nil
+                        } else {
+                            testTranslation()
+                        }
+                    }
                 }
                 .padding(.top, 10)
             }
         }
+    }
+
+    private var privacySection: some View {
+        settingsSection(p(.title)) {
+            GlassCard {
+                Text(p(.subtitle))
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.58))
+                    .padding(.bottom, 8)
+                ForEach(PrivacyPermission.allCases) { permission in
+                    privacyRow(permission)
+                    if permission != PrivacyPermission.allCases.last {
+                        Divider().overlay(.white.opacity(0.09))
+                    }
+                }
+                HStack {
+                    Spacer()
+                    Button(p(.refresh)) { permissions.refresh() }
+                        .buttonStyle(.bordered)
+                }
+                .padding(.top, 9)
+            }
+        }
+    }
+
+    private func privacyRow(_ permission: PrivacyPermission) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: permissions.isAuthorized(permission) ? "checkmark.shield" : "exclamationmark.shield")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(permissions.isAuthorized(permission) ? .green : .orange)
+                .frame(width: 24, height: 24)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(privacyName(permission))
+                    .font(.subheadline.weight(.semibold))
+                Text(permissions.isAuthorized(permission) ? p(.authorized) : p(.notAuthorized))
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.54))
+            }
+            Spacer()
+            Button(permissions.isAuthorized(permission) ? p(.openSystemSettings) : p(.requestPermission)) {
+                permissions.request(permission)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+        .padding(.vertical, 7)
     }
 
     private var systemTranslationSection: some View {
@@ -313,6 +435,8 @@ struct SettingsView: View {
             .padding(.top, 2)
 
             HStack {
+                if systemTranslationDownloadRequest != nil { ProgressView().controlSize(.small) }
+                Spacer()
                 Button(AppLocalizer.selfHosted(.recheckLanguages, language: preferences.interfaceLanguage)) {
                     refreshSystemTranslationLanguages()
                 }
@@ -320,7 +444,6 @@ struct SettingsView: View {
                     requestSystemTranslationDownload()
                 }
                 .disabled(preferences.sourceLanguage == .auto || systemTranslationDownloadRequest != nil)
-                if systemTranslationDownloadRequest != nil { ProgressView().controlSize(.small) }
             }
             if let systemTranslationMessage {
                 Text(systemTranslationMessage)
@@ -336,11 +459,12 @@ struct SettingsView: View {
         settingsSection(t(.shortcut)) {
             GlassCard {
                 SettingsRow(icon: "keyboard", tint: .mint, title: t(.shortcutTitle), subtitle: f(.currentFormat, preferences.effectiveHotkey.displayString)) {
-                    Picker(t(.shortcutTitle), selection: $preferences.hotkeyPreset) {
-                        ForEach(HotkeyPreset.allCases) { preset in Text(preset.title).tag(preset) }
+                    RightAlignedControl {
+                        Picker(t(.shortcutTitle), selection: $preferences.hotkeyPreset) {
+                            ForEach(HotkeyPreset.allCases) { preset in Text(preset.title).tag(preset) }
+                        }
+                        .labelsHidden()
                     }
-                    .labelsHidden()
-                    .frame(width: 160)
                 }
                 if preferences.hotkeyPreset == .custom {
                     Divider().overlay(.white.opacity(0.09))
@@ -391,6 +515,7 @@ struct SettingsView: View {
                 }
                 .padding(.top, 10)
                 HStack {
+                    Spacer()
                     Button(t(.recheck)) { refreshOCRLanguages() }
                     Button(t(.manageSystemLanguages)) { VisionLanguageCatalog.openLanguageAndRegionSettings() }
                 }
@@ -404,33 +529,143 @@ struct SettingsView: View {
     }
 
     private var debugSection: some View {
-        settingsSection(d(.title)) {
-            GlassCard {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(d(.title))
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.88))
                 Text(d(.description))
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.58))
-                    .padding(.bottom, 8)
-                debugColorRow(d(.primaryColor), binding: borderColorBinding(\.borderPrimaryColor))
-                Divider().overlay(.white.opacity(0.09))
-                debugColorRow(d(.secondaryColor), binding: borderColorBinding(\.borderSecondaryColor))
-                Divider().overlay(.white.opacity(0.09))
-                debugColorRow(d(.tertiaryColor), binding: borderColorBinding(\.borderTertiaryColor))
-                Divider().overlay(.white.opacity(0.09))
-                debugSliderRow(
-                    title: d(.strokeWidth),
-                    value: $preferences.borderStrokeWidth,
-                    range: 1...8,
-                    suffix: "pt"
-                )
-                Divider().overlay(.white.opacity(0.09))
-                debugSliderRow(
-                    title: d(.glowWidth),
-                    value: $preferences.borderGlowWidth,
-                    range: 0...28,
-                    suffix: "pt"
-                )
+            }
+
+            settingsSection(d(.updateTestingSection)) {
+                GlassCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Button {
+                            isUpdateSimulationPresented = true
+                        } label: {
+                            Label(d(.simulateUpdateFlow), systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                        Text(d(.simulationNotice))
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.58))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+
+            settingsSection(d(.frameSection)) {
+                GlassCard {
+                    debugColorRow(d(.primaryColor), binding: borderColorBinding(\.borderPrimaryColor))
+                    Divider().overlay(.white.opacity(0.09))
+                    debugColorRow(d(.secondaryColor), binding: borderColorBinding(\.borderSecondaryColor))
+                    Divider().overlay(.white.opacity(0.09))
+                    debugColorRow(d(.tertiaryColor), binding: borderColorBinding(\.borderTertiaryColor))
+                    Divider().overlay(.white.opacity(0.09))
+                    debugSliderRow(
+                        title: d(.strokeWidth),
+                        value: $preferences.borderStrokeWidth,
+                        range: 1...8,
+                        suffix: "pt"
+                    )
+                    Divider().overlay(.white.opacity(0.09))
+                    debugSliderRow(
+                        title: d(.glowWidth),
+                        value: $preferences.borderGlowWidth,
+                        range: 0...28,
+                        suffix: "pt"
+                    )
+                    Divider().overlay(.white.opacity(0.09))
+                    debugSliderRow(
+                        title: d(.animationSpeed),
+                        value: $preferences.borderAnimationSpeed,
+                        range: 0.05...2,
+                        suffix: "cycles/s",
+                        step: 0.05,
+                        precision: 2
+                    )
+                    Divider().overlay(.white.opacity(0.09))
+                    HStack(spacing: 10) {
+                        Spacer()
+                        Button {
+                            copyDebugParameters()
+                        } label: {
+                            Label(
+                                debugCopyMessage ?? d(.copyParameters),
+                                systemImage: debugCopyMessage == nil ? "doc.on.doc" : "checkmark"
+                            )
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        if debugCopyMessage != nil {
+                            Text(d(.copyParametersHint))
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.58))
+                        }
+                    }
+                    .padding(.top, 5)
+                }
+            }
+
+            settingsSection(d(.permissionsSection)) {
+                GlassCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(p(.resetAllPermissions))
+                            .font(.subheadline.weight(.semibold))
+                        ForEach(PrivacyPermission.allCases) { permission in
+                            HStack {
+                                Text(privacyName(permission))
+                                    .font(.caption)
+                                Spacer()
+                                Button(p(.resetPermission)) {
+                                    debugPermissionMessage = permissions.reset(permission)
+                                        ? p(.resetSucceeded)
+                                        : p(.resetFailed)
+                                }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                            }
+                        }
+                        HStack {
+                            Spacer()
+                            Button(p(.resetAllPermissions)) {
+                                debugPermissionMessage = permissions.resetAll()
+                                    ? p(.resetSucceeded)
+                                    : p(.resetFailed)
+                            }
+                            if let debugPermissionMessage {
+                                Text(debugPermissionMessage)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.58))
+                                    .lineLimit(2)
+                            }
+                        }
+                    }
+                }
             }
         }
+    }
+
+    private func copyDebugParameters() {
+        let appearance = BorderAppearance.current()
+        let parameters = """
+        {
+          "borderPrimaryColor": "\(appearance.primaryColor)",
+          "borderSecondaryColor": "\(appearance.secondaryColor)",
+          "borderTertiaryColor": "\(appearance.tertiaryColor)",
+          "borderStrokeWidth": \(String(format: "%.2f", appearance.strokeWidth)),
+          "borderGlowWidth": \(String(format: "%.2f", appearance.glowWidth)),
+          "borderAnimationSpeed": \(String(format: "%.2f", appearance.animationSpeed))
+        }
+        """
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(parameters, forType: .string)
+        debugCopyMessage = d(.parametersCopied)
     }
 
     private func settingsSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -446,10 +681,13 @@ struct SettingsView: View {
     private func languagePicker(_ title: String, selection: Binding<AppLanguage>, languages: [AppLanguage]) -> some View {
         HStack {
             Text(title).foregroundStyle(.white.opacity(0.64))
-            Picker(title, selection: selection) {
-                ForEach(languages) { language in Text(language.title).tag(language) }
+            Spacer(minLength: 8)
+            RightAlignedControl {
+                Picker(title, selection: selection) {
+                    ForEach(languages) { language in Text(language.title).tag(language) }
+                }
+                .labelsHidden()
             }
-            .labelsHidden()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -471,6 +709,17 @@ struct SettingsView: View {
 
     private func d(_ key: AppLocalizer.DebugKey) -> String {
         AppLocalizer.debug(key, language: preferences.interfaceLanguage)
+    }
+
+    private func p(_ key: AppLocalizer.PrivacyKey) -> String {
+        AppLocalizer.privacy(key, language: preferences.interfaceLanguage)
+    }
+
+    private func privacyName(_ permission: PrivacyPermission) -> String {
+        switch permission {
+        case .screenRecording: p(.screenRecording)
+        case .accessibility: p(.accessibility)
+        }
     }
 
     private func registerDebugIconTap() {
@@ -507,18 +756,21 @@ struct SettingsView: View {
         title: String,
         value: Binding<Double>,
         range: ClosedRange<Double>,
-        suffix: String
+        suffix: String,
+        step: Double = 0.25,
+        precision: Int = 1
     ) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
                 Spacer()
-                Text("\(String(format: "%.1f", value.wrappedValue)) \(suffix)")
+                let format = precision == 2 ? "%.2f" : "%.1f"
+                Text("\(String(format: format, value.wrappedValue)) \(suffix)")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.white.opacity(0.62))
             }
-            Slider(value: value, in: range, step: 0.25)
+            Slider(value: value, in: range, step: step)
         }
         .padding(.vertical, 5)
     }
@@ -532,6 +784,7 @@ struct SettingsView: View {
         let selfHostedModel = preferences.selfHostedModel
         serviceStatus = nil
         translationTestTask = Task { @MainActor in
+            let startedAt = DispatchTime.now().uptimeNanoseconds
             do {
                 let result = try await TranslationService.translate(
                     lines: [RecognizedLine(text: "Hello, welcome to Lingo Prism.", boundingBox: .init(x: 0, y: 0, width: 1, height: 1))],
@@ -540,7 +793,9 @@ struct SettingsView: View {
                     selfHostedURL: selfHostedURL, selfHostedModel: selfHostedModel
                 )
                 guard !Task.isCancelled else { return }
-                serviceStatus = AppLocalizer.format(.testSuccessFormat, engine.shortTitle, result.translatedText)
+                let elapsedMilliseconds = Int((DispatchTime.now().uptimeNanoseconds - startedAt) / 1_000_000)
+                let duration = AppLocalizer.format(.testDurationFormat, elapsedMilliseconds)
+                serviceStatus = AppLocalizer.format(.testSuccessFormat, engine.shortTitle, "\(result.translatedText)\(duration)")
             } catch {
                 guard !Task.isCancelled else { return }
                 serviceStatus = error.localizedDescription
@@ -770,7 +1025,11 @@ final class SettingsWindowController {
 
     private var window: ManagedSettingsWindow?
 
-    func show(preferences: PreferencesStore, launchAtLogin: LaunchAtLoginService) {
+    func show(
+        preferences: PreferencesStore,
+        launchAtLogin: LaunchAtLoginService,
+        permissions: PrivacyPermissionStore? = nil
+    ) {
         if let window, window.isVisible {
             NSApp.activate(ignoringOtherApps: true)
             window.orderFrontRegardless()
@@ -797,7 +1056,11 @@ final class SettingsWindowController {
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true
         window.contentView = NSHostingView(
-            rootView: SettingsView(preferences: preferences, launchAtLogin: launchAtLogin)
+            rootView: SettingsView(
+                preferences: preferences,
+                launchAtLogin: launchAtLogin,
+                permissions: permissions ?? PrivacyPermissionStore()
+            )
                 .frame(width: 600, height: 700)
         )
         window.didClose = { [weak self, weak window] in
@@ -839,6 +1102,28 @@ private struct GlassCard<Content: View>: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(.white.opacity(0.08), lineWidth: 1)
         )
+    }
+}
+
+private enum SettingsLayout {
+    static let controlColumnWidth: CGFloat = 180
+}
+
+/// Keeps menu-style controls on a shared right edge even when their labels
+/// have different intrinsic widths or are localized.
+private struct RightAlignedControl<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            content
+        }
+        .frame(width: SettingsLayout.controlColumnWidth, alignment: .trailing)
     }
 }
 

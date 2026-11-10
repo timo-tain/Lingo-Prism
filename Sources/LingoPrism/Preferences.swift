@@ -6,6 +6,7 @@ enum BorderAppearanceDefaults {
     static let tertiaryColor = "borderTertiaryColor"
     static let strokeWidth = "borderStrokeWidth"
     static let glowWidth = "borderGlowWidth"
+    static let animationSpeed = "borderAnimationSpeed"
 }
 
 struct BorderAppearance {
@@ -14,12 +15,15 @@ struct BorderAppearance {
     let tertiaryColor: String
     let strokeWidth: CGFloat
     let glowWidth: CGFloat
+    /// Number of full colour cycles per second while the translation is processing.
+    let animationSpeed: CGFloat
 
-    static let defaultPrimaryColor = "#269FFF"
+    static let defaultPrimaryColor = "#A8EAFA"
     static let defaultSecondaryColor = "#7651FF"
     static let defaultTertiaryColor = "#F052D1"
-    static let defaultStrokeWidth: CGFloat = 3
+    static let defaultStrokeWidth: CGFloat = 1
     static let defaultGlowWidth: CGFloat = 14
+    static let defaultAnimationSpeed: CGFloat = 1
 
     static func current(defaults: UserDefaults = .standard) -> Self {
         Self(
@@ -27,7 +31,8 @@ struct BorderAppearance {
             secondaryColor: defaults.string(forKey: BorderAppearanceDefaults.secondaryColor) ?? defaultSecondaryColor,
             tertiaryColor: defaults.string(forKey: BorderAppearanceDefaults.tertiaryColor) ?? defaultTertiaryColor,
             strokeWidth: clamped(CGFloat((defaults.object(forKey: BorderAppearanceDefaults.strokeWidth) as? NSNumber)?.doubleValue ?? Double(defaultStrokeWidth)), range: 1...8),
-            glowWidth: clamped(CGFloat((defaults.object(forKey: BorderAppearanceDefaults.glowWidth) as? NSNumber)?.doubleValue ?? Double(defaultGlowWidth)), range: 0...28)
+            glowWidth: clamped(CGFloat((defaults.object(forKey: BorderAppearanceDefaults.glowWidth) as? NSNumber)?.doubleValue ?? Double(defaultGlowWidth)), range: 0...28),
+            animationSpeed: clamped(CGFloat((defaults.object(forKey: BorderAppearanceDefaults.animationSpeed) as? NSNumber)?.doubleValue ?? Double(defaultAnimationSpeed)), range: 0.05...2)
         )
     }
 
@@ -75,6 +80,7 @@ final class PreferencesStore: ObservableObject {
     @Published var borderTertiaryColor: String { didSet { save() } }
     @Published var borderStrokeWidth: Double { didSet { save() } }
     @Published var borderGlowWidth: Double { didSet { save() } }
+    @Published var borderAnimationSpeed: Double { didSet { save() } }
     private let defaults: UserDefaults
 
     var effectiveHotkey: KeyboardShortcut { hotkeyPreset.shortcut ?? customHotkey }
@@ -109,6 +115,7 @@ final class PreferencesStore: ObservableObject {
         borderTertiaryColor = defaults.string(forKey: BorderAppearanceDefaults.tertiaryColor) ?? BorderAppearance.defaultTertiaryColor
         borderStrokeWidth = defaults.object(forKey: BorderAppearanceDefaults.strokeWidth) as? Double ?? Double(BorderAppearance.defaultStrokeWidth)
         borderGlowWidth = defaults.object(forKey: BorderAppearanceDefaults.glowWidth) as? Double ?? Double(BorderAppearance.defaultGlowWidth)
+        borderAnimationSpeed = defaults.object(forKey: BorderAppearanceDefaults.animationSpeed) as? Double ?? Double(BorderAppearance.defaultAnimationSpeed)
         defaults.set(engine.rawValue, forKey: Key.engine)
         defaults.set(showSettingsOnLaunch, forKey: Key.showSettingsOnLaunch)
         defaults.set(interfaceLanguage.rawValue, forKey: Key.interfaceLanguage)
@@ -143,6 +150,7 @@ final class PreferencesStore: ObservableObject {
         defaults.set(borderTertiaryColor, forKey: BorderAppearanceDefaults.tertiaryColor)
         defaults.set(borderStrokeWidth, forKey: BorderAppearanceDefaults.strokeWidth)
         defaults.set(borderGlowWidth, forKey: BorderAppearanceDefaults.glowWidth)
+        defaults.set(borderAnimationSpeed, forKey: BorderAppearanceDefaults.animationSpeed)
     }
 
     func applySelfHostedPreset(_ preset: SelfHostedEndpointPreset) {

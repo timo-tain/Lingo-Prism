@@ -94,6 +94,22 @@ enum AppLocalizer {
         case downloadFailed
     }
 
+    enum PrivacyKey {
+        case title
+        case subtitle
+        case screenRecording
+        case accessibility
+        case authorized
+        case notAuthorized
+        case requestPermission
+        case openSystemSettings
+        case refresh
+        case resetPermission
+        case resetAllPermissions
+        case resetSucceeded
+        case resetFailed
+    }
+
     enum DebugKey {
         case title
         case description
@@ -102,6 +118,15 @@ enum AppLocalizer {
         case tertiaryColor
         case strokeWidth
         case glowWidth
+        case animationSpeed
+        case frameSection
+        case permissionsSection
+        case updateTestingSection, simulateUpdateFlow, simulationNotice
+        case updateAvailableTitle, updateAvailableMessage, releaseNotesTitle, simulatedReleaseNote
+        case simulateDownload, later, downloading, downloadComplete, restartMessage, finish
+        case copyParameters
+        case parametersCopied
+        case copyParametersHint
     }
 
     enum Key: String {
@@ -112,11 +137,11 @@ enum AppLocalizer {
         case translationEngine, translationEngineSubtitle, resultDisplay
         case googleEngine, bingEngine, yandexEngine, deepLEngine, ollamaEngine
         case overlayPresentation, floatingPresentation, overlayDescription, floatingDescription
-        case ollamaURL, ollamaModel, testOllama, checking, testTranslation, cancelTest, testSuccessFormat
+        case ollamaURL, ollamaModel, testOllama, checking, testTranslation, cancelTest, testSuccessFormat, testDurationFormat
         case connectedNoModels, connectedFormat, cannotConnect
         case shortcut, shortcutTitle, currentFormat, customShortcut, pressShortcut, modifierRequired, cancel, accessibilityHelp
         case textRecognition, visionOCR, visionOCRSubtitle, recheck, manageSystemLanguages, visionInfo
-        case versionFormat
+        case versionFormat, checkForUpdates
         case startTranslation, translating, settings, quit
         case languageAuto, languageEnglish, languageTraditionalChinese, languageSimplifiedChinese
         case languageJapanese, languageKorean, languageSpanish, languageFrench, languageGerman, languageRussian
@@ -146,6 +171,20 @@ enum AppLocalizer {
         switch key {
         case .translationEngineSubtitle:
             value = translationEngineSubtitle(language: language)
+        case .checkForUpdates:
+            value = checkForUpdatesLabel(language: language)
+        case .testDurationFormat:
+            switch language {
+            case .english: value = " (elapsed %d ms)"
+            case .traditionalChinese: value = "（耗時 %d 毫秒）"
+            case .simplifiedChinese: value = "（耗时 %d 毫秒）"
+            case .japanese: value = "（所要時間 %d ミリ秒）"
+            case .korean: value = "（소요 시간 %dms）"
+            case .spanish: value = "（tiempo: %d ms）"
+            case .french: value = "（durée : %d ms）"
+            case .german: value = "（Dauer: %d ms）"
+            case .russian: value = "（время: %d мс）"
+            }
         case .googleEngine:
             value = "Google"
         case .bingEngine:
@@ -164,6 +203,100 @@ enum AppLocalizer {
         String(format: text(key, language: language), locale: Locale(identifier: language.localeIdentifier), arguments: values)
     }
 
+    private static func checkForUpdatesLabel(language: AppInterfaceLanguage) -> String {
+        switch language {
+        case .english: "Check for Updates…"
+        case .traditionalChinese: "檢查更新…"
+        case .simplifiedChinese: "检查更新…"
+        case .japanese: "アップデートを確認…"
+        case .korean: "업데이트 확인…"
+        case .spanish: "Buscar actualizaciones…"
+        case .french: "Rechercher des mises à jour…"
+        case .german: "Nach Updates suchen…"
+        case .russian: "Проверить обновления…"
+        }
+    }
+
+    static func privacy(_ key: PrivacyKey, language: AppInterfaceLanguage = currentLanguage) -> String {
+        let english: [PrivacyKey: String] = [
+            .title: "Privacy Permissions", .subtitle: "Check and manage access needed for screen translation.",
+            .screenRecording: "Screen Recording", .accessibility: "Accessibility", .authorized: "Authorized", .notAuthorized: "Not authorized",
+            .requestPermission: "Authorize", .openSystemSettings: "Open System Settings", .refresh: "Refresh",
+            .resetPermission: "Reset permission (Debug)", .resetAllPermissions: "Reset all permissions",
+            .resetSucceeded: "Permission reset. Recheck after returning from System Settings.", .resetFailed: "Could not reset this permission."
+        ]
+        let strings: [PrivacyKey: String]
+        switch language {
+        case .traditionalChinese:
+            strings = [
+                .title: "隱私權授權", .subtitle: "檢查與管理螢幕翻譯所需的系統權限。",
+                .screenRecording: "螢幕錄製", .accessibility: "輔助使用", .authorized: "已授權", .notAuthorized: "尚未授權",
+                .requestPermission: "授權", .openSystemSettings: "開啟系統設定", .refresh: "重新檢查",
+                .resetPermission: "移除授權（Debug）", .resetAllPermissions: "移除所有授權",
+                .resetSucceeded: "已移除授權；從系統設定返回後重新檢查。", .resetFailed: "無法移除此授權。"
+            ]
+        case .simplifiedChinese:
+            strings = [
+                .title: "隐私权限", .subtitle: "检查和管理屏幕翻译所需的系统权限。",
+                .screenRecording: "屏幕录制", .accessibility: "辅助功能", .authorized: "已授权", .notAuthorized: "尚未授权",
+                .requestPermission: "授权", .openSystemSettings: "打开系统设置", .refresh: "重新检查",
+                .resetPermission: "移除授权（Debug）", .resetAllPermissions: "移除所有授权",
+                .resetSucceeded: "已移除授权；从系统设置返回后重新检查。", .resetFailed: "无法移除此授权。"
+            ]
+        case .japanese:
+            strings = [
+                .title: "プライバシー権限", .subtitle: "画面翻訳に必要なアクセスを確認・管理します。",
+                .screenRecording: "画面収録", .accessibility: "アクセシビリティ", .authorized: "許可済み", .notAuthorized: "未許可",
+                .requestPermission: "許可する", .openSystemSettings: "システム設定を開く", .refresh: "再確認",
+                .resetPermission: "権限をリセット（Debug）", .resetAllPermissions: "すべての権限をリセット",
+                .resetSucceeded: "権限をリセットしました。システム設定から戻って再確認してください。", .resetFailed: "権限をリセットできませんでした。"
+            ]
+        case .korean:
+            strings = [
+                .title: "개인정보 보호 권한", .subtitle: "화면 번역에 필요한 접근 권한을 확인하고 관리합니다.",
+                .screenRecording: "화면 기록", .accessibility: "손쉬운 사용", .authorized: "허용됨", .notAuthorized: "허용되지 않음",
+                .requestPermission: "허용", .openSystemSettings: "시스템 설정 열기", .refresh: "다시 확인",
+                .resetPermission: "권한 재설정 (Debug)", .resetAllPermissions: "모든 권한 재설정",
+                .resetSucceeded: "권한을 재설정했습니다. 시스템 설정에서 돌아온 후 다시 확인하세요.", .resetFailed: "권한을 재설정하지 못했습니다."
+            ]
+        case .spanish:
+            strings = [
+                .title: "Permisos de privacidad", .subtitle: "Comprueba y gestiona los accesos necesarios para traducir la pantalla.",
+                .screenRecording: "Grabación de pantalla", .accessibility: "Accesibilidad", .authorized: "Autorizado", .notAuthorized: "No autorizado",
+                .requestPermission: "Autorizar", .openSystemSettings: "Abrir Ajustes del Sistema", .refresh: "Comprobar de nuevo",
+                .resetPermission: "Restablecer permiso (Debug)", .resetAllPermissions: "Restablecer todos los permisos",
+                .resetSucceeded: "Permiso restablecido. Compruébalo de nuevo al volver de Ajustes del Sistema.", .resetFailed: "No se pudo restablecer este permiso."
+            ]
+        case .french:
+            strings = [
+                .title: "Autorisations de confidentialité", .subtitle: "Vérifiez et gérez les accès nécessaires à la traduction d’écran.",
+                .screenRecording: "Enregistrement de l’écran", .accessibility: "Accessibilité", .authorized: "Autorisé", .notAuthorized: "Non autorisé",
+                .requestPermission: "Autoriser", .openSystemSettings: "Ouvrir les réglages système", .refresh: "Vérifier à nouveau",
+                .resetPermission: "Réinitialiser l’autorisation (Debug)", .resetAllPermissions: "Réinitialiser toutes les autorisations",
+                .resetSucceeded: "Autorisation réinitialisée. Vérifiez à nouveau après votre retour des réglages système.", .resetFailed: "Impossible de réinitialiser cette autorisation."
+            ]
+        case .german:
+            strings = [
+                .title: "Datenschutzberechtigungen", .subtitle: "Zugriffe für die Bildschirmübersetzung prüfen und verwalten.",
+                .screenRecording: "Bildschirmaufnahme", .accessibility: "Bedienungshilfen", .authorized: "Erlaubt", .notAuthorized: "Nicht erlaubt",
+                .requestPermission: "Erlauben", .openSystemSettings: "Systemeinstellungen öffnen", .refresh: "Erneut prüfen",
+                .resetPermission: "Berechtigung zurücksetzen (Debug)", .resetAllPermissions: "Alle Berechtigungen zurücksetzen",
+                .resetSucceeded: "Berechtigung zurückgesetzt. Nach der Rückkehr aus den Systemeinstellungen erneut prüfen.", .resetFailed: "Berechtigung konnte nicht zurückgesetzt werden."
+            ]
+        case .russian:
+            strings = [
+                .title: "Разрешения конфиденциальности", .subtitle: "Проверяйте и управляйте доступом, необходимым для перевода экрана.",
+                .screenRecording: "Запись экрана", .accessibility: "Универсальный доступ", .authorized: "Разрешено", .notAuthorized: "Не разрешено",
+                .requestPermission: "Разрешить", .openSystemSettings: "Открыть системные настройки", .refresh: "Проверить снова",
+                .resetPermission: "Сбросить разрешение (Debug)", .resetAllPermissions: "Сбросить все разрешения",
+                .resetSucceeded: "Разрешение сброшено. Проверьте снова после возврата из системных настроек.", .resetFailed: "Не удалось сбросить это разрешение."
+            ]
+        case .english:
+            strings = english
+        }
+        return strings[key] ?? english[key] ?? ""
+    }
+
     /// Short enough for the pointer-adjacent, auto-dismissing OCR feedback.
     static func noTextHint(language: AppInterfaceLanguage = currentLanguage) -> String {
         switch language {
@@ -180,28 +313,73 @@ enum AppLocalizer {
     }
 
     static func debug(_ key: DebugKey, language: AppInterfaceLanguage = currentLanguage) -> String {
+        switch key {
+        case .updateTestingSection, .simulateUpdateFlow, .simulationNotice,
+             .updateAvailableTitle, .updateAvailableMessage, .releaseNotesTitle, .simulatedReleaseNote,
+             .simulateDownload, .later, .downloading, .downloadComplete, .restartMessage, .finish:
+            return updateSimulationText(key, language: language)
+        default:
+            break
+        }
+
         let strings: [DebugKey: String]
         switch language {
         case .english:
-            strings = [.title: "Debug", .description: "Tune the translation frame. Changes apply immediately.", .primaryColor: "Primary colour", .secondaryColor: "Secondary colour", .tertiaryColor: "Highlight colour", .strokeWidth: "Frame thickness", .glowWidth: "Glow spread"]
+            strings = [.title: "Debug", .description: "Tune the translation frame. Changes apply immediately.", .primaryColor: "Primary colour", .secondaryColor: "Secondary colour", .tertiaryColor: "Highlight colour", .strokeWidth: "Frame thickness", .glowWidth: "Glow spread", .animationSpeed: "Flow speed", .frameSection: "Frame appearance", .permissionsSection: "Permission testing", .copyParameters: "Copy parameters", .parametersCopied: "Parameters copied", .copyParametersHint: "Paste this JSON to update the defaults."]
         case .traditionalChinese:
-            strings = [.title: "除錯", .description: "調整翻譯外框效果；變更會立即套用。", .primaryColor: "主色", .secondaryColor: "次色", .tertiaryColor: "亮點色", .strokeWidth: "框線粗細", .glowWidth: "光暈範圍"]
+            strings = [.title: "除錯", .description: "調整翻譯外框效果；變更會立即套用。", .primaryColor: "主色", .secondaryColor: "次色", .tertiaryColor: "亮點色", .strokeWidth: "框線粗細", .glowWidth: "光暈範圍", .animationSpeed: "流光速度", .frameSection: "外框線效果", .permissionsSection: "權限測試", .copyParameters: "複製參數", .parametersCopied: "參數已複製", .copyParametersHint: "可將這段 JSON 貼回來更新預設值。"]
         case .simplifiedChinese:
-            strings = [.title: "调试", .description: "调整翻译外框效果；更改会立即应用。", .primaryColor: "主色", .secondaryColor: "辅助色", .tertiaryColor: "高光色", .strokeWidth: "边框粗细", .glowWidth: "光晕范围"]
+            strings = [.title: "调试", .description: "调整翻译外框效果；更改会立即应用。", .primaryColor: "主色", .secondaryColor: "辅助色", .tertiaryColor: "高光色", .strokeWidth: "边框粗细", .glowWidth: "光晕范围", .animationSpeed: "流光速度", .frameSection: "边框效果", .permissionsSection: "权限测试", .copyParameters: "复制参数", .parametersCopied: "参数已复制", .copyParametersHint: "可以将这段 JSON 贴回来更新默认值。"]
         case .japanese:
-            strings = [.title: "デバッグ", .description: "翻訳フレームを調整します。変更はすぐに反映されます。", .primaryColor: "メインカラー", .secondaryColor: "サブカラー", .tertiaryColor: "ハイライトカラー", .strokeWidth: "フレームの太さ", .glowWidth: "グローの広がり"]
+            strings = [.title: "デバッグ", .description: "翻訳フレームを調整します。変更はすぐに反映されます。", .primaryColor: "メインカラー", .secondaryColor: "サブカラー", .tertiaryColor: "ハイライトカラー", .strokeWidth: "フレームの太さ", .glowWidth: "グローの広がり", .animationSpeed: "流光速度", .frameSection: "フレーム表示", .permissionsSection: "権限テスト", .copyParameters: "パラメータをコピー", .parametersCopied: "パラメータをコピーしました", .copyParametersHint: "この JSON を貼り付けてデフォルト値を更新できます。"]
         case .korean:
-            strings = [.title: "디버그", .description: "번역 테두리를 조정합니다. 변경 사항은 즉시 적용됩니다.", .primaryColor: "기본 색상", .secondaryColor: "보조 색상", .tertiaryColor: "강조 색상", .strokeWidth: "테두리 두께", .glowWidth: "광채 범위"]
+            strings = [.title: "디버그", .description: "번역 테두리를 조정합니다. 변경 사항은 즉시 적용됩니다.", .primaryColor: "기본 색상", .secondaryColor: "보조 색상", .tertiaryColor: "강조 색상", .strokeWidth: "테두리 두께", .glowWidth: "광채 범위", .animationSpeed: "흐르는 빛 속도", .frameSection: "테두리 효과", .permissionsSection: "권한 테스트", .copyParameters: "매개변수 복사", .parametersCopied: "매개변수를 복사했습니다", .copyParametersHint: "이 JSON을 붙여 넣어 기본값을 업데이트할 수 있습니다."]
         case .spanish:
-            strings = [.title: "Depuración", .description: "Ajusta el marco de traducción. Los cambios se aplican al instante.", .primaryColor: "Color principal", .secondaryColor: "Color secundario", .tertiaryColor: "Color de acento", .strokeWidth: "Grosor del marco", .glowWidth: "Extensión del brillo"]
+            strings = [.title: "Depuración", .description: "Ajusta el marco de traducción. Los cambios se aplican al instante.", .primaryColor: "Color principal", .secondaryColor: "Color secundario", .tertiaryColor: "Color de acento", .strokeWidth: "Grosor del marco", .glowWidth: "Extensión del brillo", .animationSpeed: "Velocidad del flujo", .frameSection: "Aspecto del marco", .permissionsSection: "Prueba de permisos", .copyParameters: "Copiar parámetros", .parametersCopied: "Parámetros copiados", .copyParametersHint: "Pega este JSON para actualizar los valores predeterminados."]
         case .french:
-            strings = [.title: "Débogage", .description: "Ajustez le cadre de traduction. Les modifications s’appliquent immédiatement.", .primaryColor: "Couleur principale", .secondaryColor: "Couleur secondaire", .tertiaryColor: "Couleur d’accent", .strokeWidth: "Épaisseur du cadre", .glowWidth: "Étendue de la lueur"]
+            strings = [.title: "Débogage", .description: "Ajustez le cadre de traduction. Les modifications s’appliquent immédiatement.", .primaryColor: "Couleur principale", .secondaryColor: "Couleur secondaire", .tertiaryColor: "Couleur d’accent", .strokeWidth: "Épaisseur du cadre", .glowWidth: "Étendue de la lueur", .animationSpeed: "Vitesse du flux", .frameSection: "Apparence du cadre", .permissionsSection: "Test des autorisations", .copyParameters: "Copier les paramètres", .parametersCopied: "Paramètres copiés", .copyParametersHint: "Collez ce JSON pour mettre à jour les valeurs par défaut."]
         case .german:
-            strings = [.title: "Debug", .description: "Übersetzungsrahmen anpassen. Änderungen werden sofort übernommen.", .primaryColor: "Primärfarbe", .secondaryColor: "Sekundärfarbe", .tertiaryColor: "Akzentfarbe", .strokeWidth: "Rahmenstärke", .glowWidth: "Leuchtweite"]
+            strings = [.title: "Debug", .description: "Übersetzungsrahmen anpassen. Änderungen werden sofort übernommen.", .primaryColor: "Primärfarbe", .secondaryColor: "Sekundärfarbe", .tertiaryColor: "Akzentfarbe", .strokeWidth: "Rahmenstärke", .glowWidth: "Leuchtweite", .animationSpeed: "Fließgeschwindigkeit", .frameSection: "Rahmenoptik", .permissionsSection: "Berechtigungstest", .copyParameters: "Parameter kopieren", .parametersCopied: "Parameter kopiert", .copyParametersHint: "Füge dieses JSON ein, um die Standardwerte zu aktualisieren."]
         case .russian:
-            strings = [.title: "Отладка", .description: "Настройте рамку перевода. Изменения применяются сразу.", .primaryColor: "Основной цвет", .secondaryColor: "Дополнительный цвет", .tertiaryColor: "Акцентный цвет", .strokeWidth: "Толщина рамки", .glowWidth: "Размер свечения"]
+            strings = [.title: "Отладка", .description: "Настройте рамку перевода. Изменения применяются сразу.", .primaryColor: "Основной цвет", .secondaryColor: "Дополнительный цвет", .tertiaryColor: "Акцентный цвет", .strokeWidth: "Толщина рамки", .glowWidth: "Размер свечения", .animationSpeed: "Скорость потока", .frameSection: "Вид рамки", .permissionsSection: "Проверка разрешений", .copyParameters: "Скопировать параметры", .parametersCopied: "Параметры скопированы", .copyParametersHint: "Вставьте этот JSON, чтобы обновить значения по умолчанию."]
         }
         return strings[key] ?? ""
+    }
+
+    private static func updateSimulationText(_ key: DebugKey, language: AppInterfaceLanguage) -> String {
+        let english: [DebugKey: String] = [
+            .updateTestingSection: "Update flow testing", .simulateUpdateFlow: "Simulate an update",
+            .simulationNotice: "Preview only. No files will be downloaded or installed.",
+            .updateAvailableTitle: "A new version is available",
+            .updateAvailableMessage: "Lingo Prism 0.4.0 is ready to install.",
+            .releaseNotesTitle: "What’s New", .simulatedReleaseNote: "Improved screen translation and stability.", .simulateDownload: "Simulate Download",
+            .later: "Later", .downloading: "Downloading update…",
+            .downloadComplete: "Download complete", .restartMessage: "Lingo Prism would restart to finish installing the update.",
+            .finish: "Finish"
+        ]
+        let traditionalChinese: [DebugKey: String] = [
+            .updateTestingSection: "更新流程測試", .simulateUpdateFlow: "模擬更新流程",
+            .simulationNotice: "僅供預覽，不會下載或安裝任何檔案。",
+            .updateAvailableTitle: "有新版本可供更新",
+            .updateAvailableMessage: "Lingo Prism 0.4.0 已準備好安裝。",
+            .releaseNotesTitle: "更新內容", .simulatedReleaseNote: "改善螢幕翻譯與穩定性。", .simulateDownload: "模擬下載",
+            .later: "稍後", .downloading: "正在下載更新…",
+            .downloadComplete: "下載完成", .restartMessage: "實際更新時，Lingo Prism 會重新啟動以完成安裝。",
+            .finish: "完成"
+        ]
+        let simplifiedChinese: [DebugKey: String] = [
+            .updateTestingSection: "更新流程测试", .simulateUpdateFlow: "模拟更新流程",
+            .simulationNotice: "仅供预览，不会下载或安装任何文件。",
+            .updateAvailableTitle: "有新版本可供更新",
+            .updateAvailableMessage: "Lingo Prism 0.4.0 已准备好安装。",
+            .releaseNotesTitle: "更新内容", .simulatedReleaseNote: "改进屏幕翻译与稳定性。", .simulateDownload: "模拟下载",
+            .later: "稍后", .downloading: "正在下载更新…",
+            .downloadComplete: "下载完成", .restartMessage: "实际更新时，Lingo Prism 会重新启动以完成安装。",
+            .finish: "完成"
+        ]
+        if language == .traditionalChinese { return traditionalChinese[key] ?? "" }
+        if language == .simplifiedChinese { return simplifiedChinese[key] ?? "" }
+        return english[key] ?? ""
     }
 
     static func engineTitle(_ key: EngineTitle, language: AppInterfaceLanguage = currentLanguage) -> String {
@@ -238,7 +416,7 @@ enum AppLocalizer {
             .custom: "Custom", .endpoint: "Server address", .model: "Model name", .testConnection: "Test Connection",
             .systemLanguages: "System Translation Languages", .systemLanguagesSubtitle: "Availability for the selected target language",
             .installed: "Installed", .availableToDownload: "Available to download", .unsupported: "Not supported",
-            .recheckLanguages: "Recheck", .downloadSelectedPair: "Download selected pair", .chooseSourceLanguage: "Choose a source language before downloading",
+            .recheckLanguages: "Recheck", .downloadSelectedPair: "Download selected pair", .chooseSourceLanguage: "Choose a source language before using System Translation",
             .requiresMacOS26: "Translation in Lingo Prism requires macOS 26 or later.", .downloading: "Preparing system language download…",
             .downloadFailed: "The system language download could not be started."
         ]
@@ -246,7 +424,7 @@ enum AppLocalizer {
             .custom: "自訂", .endpoint: "伺服器位址", .model: "模型名稱", .testConnection: "測試連線",
             .systemLanguages: "系統翻譯語言", .systemLanguagesSubtitle: "依目前選擇的目標語言顯示可用性",
             .installed: "已安裝", .availableToDownload: "可下載", .unsupported: "不支援",
-            .recheckLanguages: "重新檢查", .downloadSelectedPair: "下載所選語言配對", .chooseSourceLanguage: "請先選擇原文語言再下載",
+            .recheckLanguages: "重新檢查", .downloadSelectedPair: "下載所選語言配對", .chooseSourceLanguage: "使用系統翻譯前請先選擇原文語言",
             .requiresMacOS26: "Lingo Prism 內使用系統翻譯需要 macOS 26 或以上版本。", .downloading: "正在準備系統語言下載…",
             .downloadFailed: "無法開始系統語言下載。"
         ]
@@ -254,7 +432,7 @@ enum AppLocalizer {
             .custom: "自定义", .endpoint: "服务器地址", .model: "模型名称", .testConnection: "测试连接",
             .systemLanguages: "系统翻译语言", .systemLanguagesSubtitle: "显示所选目标语言的可用性",
             .installed: "已安装", .availableToDownload: "可下载", .unsupported: "不支持",
-            .recheckLanguages: "重新检查", .downloadSelectedPair: "下载所选语言对", .chooseSourceLanguage: "下载前请选择源语言",
+            .recheckLanguages: "重新检查", .downloadSelectedPair: "下载所选语言对", .chooseSourceLanguage: "使用系统翻译前请选择源语言",
             .requiresMacOS26: "在 Lingo Prism 中使用系统翻译需要 macOS 26 或更高版本。", .downloading: "正在准备系统语言下载…",
             .downloadFailed: "无法开始系统语言下载。"
         ]
@@ -263,17 +441,17 @@ enum AppLocalizer {
         case .traditionalChinese: strings = traditionalChinese
         case .simplifiedChinese: strings = simplifiedChinese
         case .japanese:
-            strings = [.custom: "カスタム", .endpoint: "サーバーアドレス", .model: "モデル名", .testConnection: "接続をテスト", .systemLanguages: "システム翻訳言語", .systemLanguagesSubtitle: "選択中の翻訳先に対する利用状況", .installed: "インストール済み", .availableToDownload: "ダウンロード可能", .unsupported: "非対応", .recheckLanguages: "再確認", .downloadSelectedPair: "選択した言語ペアをダウンロード", .chooseSourceLanguage: "ダウンロード前に原文の言語を選択してください", .requiresMacOS26: "Lingo Prism 内のシステム翻訳には macOS 26 以降が必要です。", .downloading: "システム言語のダウンロードを準備中…", .downloadFailed: "システム言語のダウンロードを開始できませんでした。"]
+            strings = [.custom: "カスタム", .endpoint: "サーバーアドレス", .model: "モデル名", .testConnection: "接続をテスト", .systemLanguages: "システム翻訳言語", .systemLanguagesSubtitle: "選択中の翻訳先に対する利用状況", .installed: "インストール済み", .availableToDownload: "ダウンロード可能", .unsupported: "非対応", .recheckLanguages: "再確認", .downloadSelectedPair: "選択した言語ペアをダウンロード", .chooseSourceLanguage: "システム翻訳を使う前に原文の言語を選択してください", .requiresMacOS26: "Lingo Prism 内のシステム翻訳には macOS 26 以降が必要です。", .downloading: "システム言語のダウンロードを準備中…", .downloadFailed: "システム言語のダウンロードを開始できませんでした。"]
         case .korean:
-            strings = [.custom: "사용자화", .endpoint: "서버 주소", .model: "모델 이름", .testConnection: "연결 테스트", .systemLanguages: "시스템 번역 언어", .systemLanguagesSubtitle: "선택한 대상 언어의 사용 가능 여부", .installed: "설치됨", .availableToDownload: "다운로드 가능", .unsupported: "지원되지 않음", .recheckLanguages: "다시 확인", .downloadSelectedPair: "선택한 언어 쌍 다운로드", .chooseSourceLanguage: "다운로드하기 전에 원본 언어를 선택하세요", .requiresMacOS26: "Lingo Prism에서 시스템 번역을 사용하려면 macOS 26 이상이 필요합니다.", .downloading: "시스템 언어 다운로드 준비 중…", .downloadFailed: "시스템 언어 다운로드를 시작할 수 없습니다."]
+            strings = [.custom: "사용자화", .endpoint: "서버 주소", .model: "모델 이름", .testConnection: "연결 테스트", .systemLanguages: "시스템 번역 언어", .systemLanguagesSubtitle: "선택한 대상 언어의 사용 가능 여부", .installed: "설치됨", .availableToDownload: "다운로드 가능", .unsupported: "지원되지 않음", .recheckLanguages: "다시 확인", .downloadSelectedPair: "선택한 언어 쌍 다운로드", .chooseSourceLanguage: "시스템 번역을 사용하기 전에 원본 언어를 선택하세요", .requiresMacOS26: "Lingo Prism에서 시스템 번역을 사용하려면 macOS 26 이상이 필요합니다.", .downloading: "시스템 언어 다운로드 준비 중…", .downloadFailed: "시스템 언어 다운로드를 시작할 수 없습니다."]
         case .spanish:
-            strings = [.custom: "Personalizado", .endpoint: "Dirección del servidor", .model: "Nombre del modelo", .testConnection: "Probar conexión", .systemLanguages: "Idiomas de traducción del sistema", .systemLanguagesSubtitle: "Disponibilidad para el idioma de destino seleccionado", .installed: "Instalado", .availableToDownload: "Disponible para descargar", .unsupported: "No compatible", .recheckLanguages: "Comprobar de nuevo", .downloadSelectedPair: "Descargar par seleccionado", .chooseSourceLanguage: "Elige un idioma de origen antes de descargar", .requiresMacOS26: "La traducción del sistema en Lingo Prism requiere macOS 26 o posterior.", .downloading: "Preparando la descarga del idioma del sistema…", .downloadFailed: "No se pudo iniciar la descarga del idioma del sistema."]
+            strings = [.custom: "Personalizado", .endpoint: "Dirección del servidor", .model: "Nombre del modelo", .testConnection: "Probar conexión", .systemLanguages: "Idiomas de traducción del sistema", .systemLanguagesSubtitle: "Disponibilidad para el idioma de destino seleccionado", .installed: "Instalado", .availableToDownload: "Disponible para descargar", .unsupported: "No compatible", .recheckLanguages: "Comprobar de nuevo", .downloadSelectedPair: "Descargar par seleccionado", .chooseSourceLanguage: "Elige un idioma de origen antes de usar la traducción del sistema", .requiresMacOS26: "La traducción del sistema en Lingo Prism requiere macOS 26 o posterior.", .downloading: "Preparando la descarga del idioma del sistema…", .downloadFailed: "No se pudo iniciar la descarga del idioma del sistema."]
         case .french:
-            strings = [.custom: "Personnalisé", .endpoint: "Adresse du serveur", .model: "Nom du modèle", .testConnection: "Tester la connexion", .systemLanguages: "Langues de traduction système", .systemLanguagesSubtitle: "Disponibilité pour la langue cible sélectionnée", .installed: "Installé", .availableToDownload: "Disponible au téléchargement", .unsupported: "Non pris en charge", .recheckLanguages: "Vérifier à nouveau", .downloadSelectedPair: "Télécharger la paire sélectionnée", .chooseSourceLanguage: "Choisissez une langue source avant le téléchargement", .requiresMacOS26: "La traduction système dans Lingo Prism nécessite macOS 26 ou ultérieur.", .downloading: "Préparation du téléchargement de la langue système…", .downloadFailed: "Impossible de démarrer le téléchargement de la langue système."]
+            strings = [.custom: "Personnalisé", .endpoint: "Adresse du serveur", .model: "Nom du modèle", .testConnection: "Tester la connexion", .systemLanguages: "Langues de traduction système", .systemLanguagesSubtitle: "Disponibilité pour la langue cible sélectionnée", .installed: "Installé", .availableToDownload: "Disponible au téléchargement", .unsupported: "Non pris en charge", .recheckLanguages: "Vérifier à nouveau", .downloadSelectedPair: "Télécharger la paire sélectionnée", .chooseSourceLanguage: "Choisissez une langue source avant d’utiliser la traduction système", .requiresMacOS26: "La traduction système dans Lingo Prism nécessite macOS 26 ou ultérieur.", .downloading: "Préparation du téléchargement de la langue système…", .downloadFailed: "Impossible de démarrer le téléchargement de la langue système."]
         case .german:
-            strings = [.custom: "Benutzerdefiniert", .endpoint: "Serveradresse", .model: "Modellname", .testConnection: "Verbindung testen", .systemLanguages: "Systemübersetzungssprachen", .systemLanguagesSubtitle: "Verfügbarkeit für die gewählte Zielsprache", .installed: "Installiert", .availableToDownload: "Zum Download verfügbar", .unsupported: "Nicht unterstützt", .recheckLanguages: "Erneut prüfen", .downloadSelectedPair: "Ausgewähltes Sprachpaar laden", .chooseSourceLanguage: "Wählen Sie vor dem Download eine Ausgangssprache", .requiresMacOS26: "Die Systemübersetzung in Lingo Prism erfordert macOS 26 oder neuer.", .downloading: "Download der Systemsprache wird vorbereitet…", .downloadFailed: "Der Download der Systemsprache konnte nicht gestartet werden."]
+            strings = [.custom: "Benutzerdefiniert", .endpoint: "Serveradresse", .model: "Modellname", .testConnection: "Verbindung testen", .systemLanguages: "Systemübersetzungssprachen", .systemLanguagesSubtitle: "Verfügbarkeit für die gewählte Zielsprache", .installed: "Installiert", .availableToDownload: "Zum Download verfügbar", .unsupported: "Nicht unterstützt", .recheckLanguages: "Erneut prüfen", .downloadSelectedPair: "Ausgewähltes Sprachpaar laden", .chooseSourceLanguage: "Wählen Sie vor der Systemübersetzung eine Ausgangssprache", .requiresMacOS26: "Die Systemübersetzung in Lingo Prism erfordert macOS 26 oder neuer.", .downloading: "Download der Systemsprache wird vorbereitet…", .downloadFailed: "Der Download der Systemsprache konnte nicht gestartet werden."]
         case .russian:
-            strings = [.custom: "Пользовательский", .endpoint: "Адрес сервера", .model: "Название модели", .testConnection: "Проверить подключение", .systemLanguages: "Языки системного перевода", .systemLanguagesSubtitle: "Доступность для выбранного целевого языка", .installed: "Установлено", .availableToDownload: "Доступно для загрузки", .unsupported: "Не поддерживается", .recheckLanguages: "Проверить снова", .downloadSelectedPair: "Загрузить выбранную пару", .chooseSourceLanguage: "Перед загрузкой выберите исходный язык", .requiresMacOS26: "Для системного перевода в Lingo Prism требуется macOS 26 или новее.", .downloading: "Подготовка загрузки системного языка…", .downloadFailed: "Не удалось начать загрузку системного языка."]
+            strings = [.custom: "Пользовательский", .endpoint: "Адрес сервера", .model: "Название модели", .testConnection: "Проверить подключение", .systemLanguages: "Языки системного перевода", .systemLanguagesSubtitle: "Доступность для выбранного целевого языка", .installed: "Установлено", .availableToDownload: "Доступно для загрузки", .unsupported: "Не поддерживается", .recheckLanguages: "Проверить снова", .downloadSelectedPair: "Загрузить выбранную пару", .chooseSourceLanguage: "Перед системным переводом выберите исходный язык", .requiresMacOS26: "Для системного перевода в Lingo Prism требуется macOS 26 или новее.", .downloading: "Подготовка загрузки системного языка…", .downloadFailed: "Не удалось начать загрузку системного языка."]
         case .english: strings = english
         }
         return strings[key] ?? english[key] ?? ""
@@ -302,7 +480,7 @@ enum AppLocalizer {
             .translationEngine: "Translation Engine", .translationEngineSubtitle: "Google is the default and needs no API key", .resultDisplay: "Result Display",
             .googleEngine: "Google (No API Key)", .bingEngine: "Bing (No API Key)", .yandexEngine: "Yandex (No API Key)", .deepLEngine: "DeepL (No API Key)", .ollamaEngine: "Local Ollama",
             .overlayPresentation: "Screen Overlay (Default)", .floatingPresentation: "Floating Window", .overlayDescription: "Redraw translation in place while keeping the screen background.", .floatingDescription: "Show a source and translation card next to the selection.",
-            .ollamaURL: "Ollama server address", .ollamaModel: "Model name", .testOllama: "Test Ollama Connection", .checking: "Checking…", .testTranslation: "Test Translation", .cancelTest: "Cancel Test", .testSuccessFormat: "%@ test succeeded: %@",
+            .ollamaURL: "Ollama server address", .ollamaModel: "Model name", .testOllama: "Test Ollama Connection", .checking: "Checking…", .testTranslation: "Test Translation", .cancelTest: "Cancel Test", .testSuccessFormat: "%@ test succeeded: %@", .testDurationFormat: " (elapsed %d ms)",
             .connectedNoModels: "Connected, but no models were found", .connectedFormat: "Connected: %@", .cannotConnect: "Unable to connect",
             .shortcut: "Shortcut", .shortcutTitle: "Start Screen Translation", .currentFormat: "Current: %@", .customShortcut: "Custom Shortcut", .pressShortcut: "Press a shortcut; Esc cancels", .modifierRequired: "At least one modifier key is required", .cancel: "Cancel", .accessibilityHelp: "To use the shortcut while another app is active, allow Lingo Prism in Privacy & Security > Accessibility.",
             .textRecognition: "Text Recognition", .visionOCR: "Vision OCR", .visionOCRSubtitle: "Text recognition happens on this Mac", .recheck: "Check Again", .manageSystemLanguages: "Manage System Languages", .visionInfo: "Vision language models are managed by macOS. Return here and check again after changing system languages.",
@@ -322,7 +500,7 @@ enum AppLocalizer {
             .translation: "翻譯", .translationLanguage: "翻譯語言", .translationLanguageSubtitle: "選擇辨識原文與目標語言", .sourceLanguage: "原文", .targetLanguage: "目標",
             .translationEngine: "翻譯引擎", .translationEngineSubtitle: "Google 預設免金鑰", .resultDisplay: "結果顯示", .googleEngine: "Google（免金鑰）", .bingEngine: "Bing（免金鑰）", .yandexEngine: "Yandex（免金鑰）", .deepLEngine: "DeepL（免金鑰）", .ollamaEngine: "本機 Ollama",
             .overlayPresentation: "螢幕覆蓋（預設）", .floatingPresentation: "浮動視窗", .overlayDescription: "在原文字位置重繪譯文，保留畫面背景。", .floatingDescription: "在選取區域旁顯示原文與譯文卡片。",
-            .ollamaURL: "Ollama 伺服器位址", .ollamaModel: "模型名稱", .testOllama: "測試 Ollama 連線", .checking: "檢查中…", .testTranslation: "測試翻譯", .cancelTest: "取消測試", .testSuccessFormat: "%@ 測試成功：%@", .connectedNoModels: "已連線，但尚未找到模型", .connectedFormat: "已連線：%@", .cannotConnect: "無法連線",
+            .ollamaURL: "Ollama 伺服器位址", .ollamaModel: "模型名稱", .testOllama: "測試 Ollama 連線", .checking: "檢查中…", .testTranslation: "測試翻譯", .cancelTest: "取消測試", .testSuccessFormat: "%@ 測試成功：%@", .testDurationFormat: "（耗時 %d 毫秒）", .connectedNoModels: "已連線，但尚未找到模型", .connectedFormat: "已連線：%@", .cannotConnect: "無法連線",
             .shortcut: "快捷鍵", .shortcutTitle: "啟動框選翻譯", .currentFormat: "目前：%@", .customShortcut: "自訂組合", .pressShortcut: "按下組合鍵；Esc 取消", .modifierRequired: "至少需一個修飾鍵", .cancel: "取消", .accessibilityHelp: "在其他 App 前景時使用快捷鍵，需要在「隱私權與安全性 > 輔助使用」允許 Lingo Prism。",
             .textRecognition: "文字辨識", .visionOCR: "Vision OCR", .visionOCRSubtitle: "辨識會在此 Mac 本機完成", .recheck: "重新檢查", .manageSystemLanguages: "管理系統語言", .visionInfo: "Vision 語言模型由 macOS 管理；完成系統語言設定後，回到這裡重新檢查。",
             .versionFormat: "版本 %@", .startTranslation: "開始螢幕翻譯", .translating: "正在處理…", .settings: "設定", .quit: "結束",

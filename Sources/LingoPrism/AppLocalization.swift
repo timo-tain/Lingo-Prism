@@ -122,8 +122,7 @@ enum AppLocalizer {
         case frameSection
         case permissionsSection
         case updateTestingSection, simulateUpdateFlow, simulationNotice
-        case updateAvailableTitle, updateAvailableMessage, releaseNotesTitle, simulatedReleaseNote
-        case simulateDownload, later, downloading, downloadComplete, restartMessage, finish
+        case updateAvailableTitle, updateAvailableMessage, releaseNotesTitle, simulatedReleaseNote, later, installUpdate
         case copyParameters
         case parametersCopied
         case copyParametersHint
@@ -141,7 +140,7 @@ enum AppLocalizer {
         case connectedNoModels, connectedFormat, cannotConnect
         case shortcut, shortcutTitle, currentFormat, customShortcut, pressShortcut, modifierRequired, cancel, accessibilityHelp
         case textRecognition, visionOCR, visionOCRSubtitle, recheck, manageSystemLanguages, visionInfo
-        case versionFormat, checkForUpdates
+        case versionFormat, checkForUpdates, check, updateVersion, update, updateAvailableFormat
         case startTranslation, translating, settings, quit
         case languageAuto, languageEnglish, languageTraditionalChinese, languageSimplifiedChinese
         case languageJapanese, languageKorean, languageSpanish, languageFrench, languageGerman, languageRussian
@@ -173,6 +172,53 @@ enum AppLocalizer {
             value = translationEngineSubtitle(language: language)
         case .checkForUpdates:
             value = checkForUpdatesLabel(language: language)
+        case .check:
+            switch language {
+            case .english: value = "Check"
+            case .traditionalChinese, .simplifiedChinese: value = "檢查"
+            case .japanese: value = "確認"
+            case .korean: value = "확인"
+            case .spanish: value = "Comprobar"
+            case .french: value = "Vérifier"
+            case .german: value = "Prüfen"
+            case .russian: value = "Проверить"
+            }
+        case .updateVersion:
+            switch language {
+            case .english: value = "Update Available"
+            case .traditionalChinese: value = "更新版本"
+            case .simplifiedChinese: value = "更新版本"
+            case .japanese: value = "アップデート"
+            case .korean: value = "업데이트"
+            case .spanish: value = "Actualizar versión"
+            case .french: value = "Mettre à jour"
+            case .german: value = "Version aktualisieren"
+            case .russian: value = "Обновить версию"
+            }
+        case .update:
+            switch language {
+            case .english: value = "Update"
+            case .traditionalChinese: value = "更新"
+            case .simplifiedChinese: value = "更新"
+            case .japanese: value = "更新"
+            case .korean: value = "업데이트"
+            case .spanish: value = "Actualizar"
+            case .french: value = "Mettre à jour"
+            case .german: value = "Aktualisieren"
+            case .russian: value = "Обновить"
+            }
+        case .updateAvailableFormat:
+            switch language {
+            case .english: value = "Lingo Prism %@ is available to update."
+            case .traditionalChinese: value = "Lingo Prism %@ 有新版本可供更新。"
+            case .simplifiedChinese: value = "Lingo Prism %@ 有新版本可供更新。"
+            case .japanese: value = "Lingo Prism %@ をアップデートできます。"
+            case .korean: value = "Lingo Prism %@ 업데이트를 사용할 수 있습니다."
+            case .spanish: value = "Hay una actualización de Lingo Prism %@ disponible."
+            case .french: value = "Une mise à jour de Lingo Prism %@ est disponible."
+            case .german: value = "Ein Update für Lingo Prism %@ ist verfügbar."
+            case .russian: value = "Доступно обновление Lingo Prism %@."
+            }
         case .testDurationFormat:
             switch language {
             case .english: value = " (elapsed %d ms)"
@@ -205,15 +251,15 @@ enum AppLocalizer {
 
     private static func checkForUpdatesLabel(language: AppInterfaceLanguage) -> String {
         switch language {
-        case .english: "Check for Updates…"
-        case .traditionalChinese: "檢查更新…"
-        case .simplifiedChinese: "检查更新…"
-        case .japanese: "アップデートを確認…"
-        case .korean: "업데이트 확인…"
-        case .spanish: "Buscar actualizaciones…"
-        case .french: "Rechercher des mises à jour…"
-        case .german: "Nach Updates suchen…"
-        case .russian: "Проверить обновления…"
+        case .english: "Check for Updates"
+        case .traditionalChinese: "檢查更新"
+        case .simplifiedChinese: "检查更新"
+        case .japanese: "アップデートを確認"
+        case .korean: "업데이트 확인"
+        case .spanish: "Buscar actualizaciones"
+        case .french: "Rechercher des mises à jour"
+        case .german: "Nach Updates suchen"
+        case .russian: "Проверить обновления"
         }
     }
 
@@ -315,8 +361,7 @@ enum AppLocalizer {
     static func debug(_ key: DebugKey, language: AppInterfaceLanguage = currentLanguage) -> String {
         switch key {
         case .updateTestingSection, .simulateUpdateFlow, .simulationNotice,
-             .updateAvailableTitle, .updateAvailableMessage, .releaseNotesTitle, .simulatedReleaseNote,
-             .simulateDownload, .later, .downloading, .downloadComplete, .restartMessage, .finish:
+             .updateAvailableTitle, .updateAvailableMessage, .releaseNotesTitle, .simulatedReleaseNote, .later, .installUpdate:
             return updateSimulationText(key, language: language)
         default:
             break
@@ -348,34 +393,25 @@ enum AppLocalizer {
 
     private static func updateSimulationText(_ key: DebugKey, language: AppInterfaceLanguage) -> String {
         let english: [DebugKey: String] = [
-            .updateTestingSection: "Update flow testing", .simulateUpdateFlow: "Simulate an update",
-            .simulationNotice: "Preview only. No files will be downloaded or installed.",
-            .updateAvailableTitle: "A new version is available",
-            .updateAvailableMessage: "Lingo Prism 0.4.0 is ready to install.",
-            .releaseNotesTitle: "What’s New", .simulatedReleaseNote: "Improved screen translation and stability.", .simulateDownload: "Simulate Download",
-            .later: "Later", .downloading: "Downloading update…",
-            .downloadComplete: "Download complete", .restartMessage: "Lingo Prism would restart to finish installing the update.",
-            .finish: "Finish"
+            .updateTestingSection: "Update flow testing", .simulateUpdateFlow: "Simulate an available update",
+            .simulationNotice: "Shows the passive update notice in the menu bar popover. No files are downloaded or installed.",
+            .updateAvailableTitle: "A new version is available", .updateAvailableMessage: "Lingo Prism %@ is ready to install.",
+            .releaseNotesTitle: "What’s New", .simulatedReleaseNote: "Improved screen translation and stability.",
+            .later: "Later", .installUpdate: "Update Now"
         ]
         let traditionalChinese: [DebugKey: String] = [
-            .updateTestingSection: "更新流程測試", .simulateUpdateFlow: "模擬更新流程",
-            .simulationNotice: "僅供預覽，不會下載或安裝任何檔案。",
-            .updateAvailableTitle: "有新版本可供更新",
-            .updateAvailableMessage: "Lingo Prism 0.4.0 已準備好安裝。",
-            .releaseNotesTitle: "更新內容", .simulatedReleaseNote: "改善螢幕翻譯與穩定性。", .simulateDownload: "模擬下載",
-            .later: "稍後", .downloading: "正在下載更新…",
-            .downloadComplete: "下載完成", .restartMessage: "實際更新時，Lingo Prism 會重新啟動以完成安裝。",
-            .finish: "完成"
+            .updateTestingSection: "更新流程測試", .simulateUpdateFlow: "模擬有可用更新",
+            .simulationNotice: "在選單列浮動視窗顯示被動更新提示；不會下載或安裝檔案。",
+            .updateAvailableTitle: "有新版本可供更新", .updateAvailableMessage: "Lingo Prism %@ 已準備好安裝。",
+            .releaseNotesTitle: "更新內容", .simulatedReleaseNote: "改善螢幕翻譯與穩定性。",
+            .later: "稍後", .installUpdate: "立即更新"
         ]
         let simplifiedChinese: [DebugKey: String] = [
-            .updateTestingSection: "更新流程测试", .simulateUpdateFlow: "模拟更新流程",
-            .simulationNotice: "仅供预览，不会下载或安装任何文件。",
-            .updateAvailableTitle: "有新版本可供更新",
-            .updateAvailableMessage: "Lingo Prism 0.4.0 已准备好安装。",
-            .releaseNotesTitle: "更新内容", .simulatedReleaseNote: "改进屏幕翻译与稳定性。", .simulateDownload: "模拟下载",
-            .later: "稍后", .downloading: "正在下载更新…",
-            .downloadComplete: "下载完成", .restartMessage: "实际更新时，Lingo Prism 会重新启动以完成安装。",
-            .finish: "完成"
+            .updateTestingSection: "更新流程测试", .simulateUpdateFlow: "模拟有可用更新",
+            .simulationNotice: "在菜单栏浮动窗口显示被动更新提示；不会下载或安装文件。",
+            .updateAvailableTitle: "有新版本可供更新", .updateAvailableMessage: "Lingo Prism %@ 已准备好安装。",
+            .releaseNotesTitle: "更新内容", .simulatedReleaseNote: "改进屏幕翻译与稳定性。",
+            .later: "稍后", .installUpdate: "立即更新"
         ]
         if language == .traditionalChinese { return traditionalChinese[key] ?? "" }
         if language == .simplifiedChinese { return simplifiedChinese[key] ?? "" }

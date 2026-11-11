@@ -9,6 +9,12 @@ final class AppModel: ObservableObject {
     @Published private(set) var status = AppLocalizer.text(.statusReady)
     @Published private(set) var latestResult: TranslationResult?
     @Published private(set) var hotkeyEnabled = false
+    @Published private(set) var detectedUpdateVersion: String?
+    @Published private(set) var isSimulatingUpdateAvailable = false
+
+    var availableUpdateVersion: String? {
+        isSimulatingUpdateAvailable ? "0.5.0" : detectedUpdateVersion
+    }
 
     let preferences = PreferencesStore()
     let launchAtLogin = LaunchAtLoginService()
@@ -41,7 +47,10 @@ final class AppModel: ObservableObject {
     func start() {
         guard !didStart else { return }
         didStart = true
-        _ = AppUpdater.shared
+        AppUpdater.shared.onUpdateAvailable = { [weak self] version in
+            self?.recordAvailableUpdate(version: version)
+        }
+        AppUpdater.shared.start()
         privacyPermissions.refresh()
         hotkeyEnabled = privacyPermissions.accessibilityAuthorized
         hotkeyMonitor.start(shortcut: preferences.effectiveHotkey) { [weak self] in
@@ -59,6 +68,34 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func setUpdateSimulationEnabled(_ enabled: Bool) {
+        isSimulatingUpdateAvailable = enabled
+    }
+
+    func checkForUpdatesIfNeededToday() {
+        guard !isSimulatingUpdateAvailable else { return }
+
+        let defaults = UserDefaults.standard
+        let key = "lastDailyUpdateCheck"
+        let today = Calendar.current.startOfDay(for: Date())
+        if let lastCheck = defaults.object(forKey: key) as? Date,
+           Calendar.current.isDate(lastCheck, inSameDayAs: today) {
+            return
+        }
+
+        defaults.set(today, forKey: key)
+        AppUpdater.shared.checkForUpdatesInBackground()
+    }
+
+    func checkForUpdates() {
+        guard !isSimulatingUpdateAvailable else { return }
+        AppUpdater.shared.checkForUpdates()
+    }
+
+    private func recordAvailableUpdate(version: String) {
+        detectedUpdateVersion = version
+    }
+
     func requestAccessibilityPermission() {
         privacyPermissions.request(.accessibility)
         hotkeyEnabled = privacyPermissions.accessibilityAuthorized
@@ -71,6 +108,7 @@ final class AppModel: ObservableObject {
         SettingsWindowController.shared.show(
             preferences: preferences,
             launchAtLogin: launchAtLogin,
+            model: self,
             permissions: privacyPermissions
         )
     }

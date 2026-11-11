@@ -8,6 +8,7 @@ struct LingoPrismApp: App {
     var body: some Scene {
         Settings {
             SettingsView(
+                model: model,
                 preferences: model.preferences,
                 launchAtLogin: model.launchAtLogin,
                 permissions: model.privacyPermissions

@@ -25,7 +25,7 @@
     <key>SUPublicEDKey</key>
     <string>E/LIEjFvBPBMuaNlWZf5iBNB1c5iYv4uOqRn2hoSBC0=</string>
     <key>SUEnableAutomaticChecks</key>
-    <true/>
+    <false/>
     <key>SUVerifyUpdateBeforeExtraction</key>
     <true/>
     <key>CFBundleIconFile</key>

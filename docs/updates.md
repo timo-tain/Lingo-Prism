@@ -6,8 +6,9 @@ Lingo Prism uses Sparkle 2 for signed in-app updates. Update metadata and archiv
 
 - The appcast URL is `https://github.com/timo-tain/Lingo-Prism/releases/latest/download/appcast.xml`.
 - Each Sparkle-enabled GitHub Release must include `appcast.xml` and the versioned `Lingo-Prism-v<version>-macOS.zip` archive.
-- Sparkle checks for updates automatically once a day and also has a manual **Check for Updates** button in Settings.
-- Automatic installation is off. Sparkle presents its normal update dialog; the user chooses to download and install, then the app restarts to finish.
+- The app silently checks for updates when the user first opens the menu bar popover each day. Settings also has a manual check button.
+- A found update is shown passively in the menu bar popover and Settings; the app does not open an update dialog by itself. The user can choose **Update** to open Sparkle's update dialog.
+- Automatic installation is off. The user chooses whether to download and install, then the app restarts to finish.
 - The public EdDSA key is stored in `Resources/Info.plist`. The matching private key was generated into the developer's login Keychain under Sparkle's default `ed25519` account. Do not commit or share the private key.
 
 ## Preparing a release

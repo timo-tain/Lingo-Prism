@@ -16,6 +16,23 @@ struct MenuBarView: View {
                     .font(.headline)
             }
 
+            if let version = model.availableUpdateVersion {
+                HStack(alignment: .top, spacing: 9) {
+                    Image(systemName: "arrow.down.circle")
+                        .foregroundStyle(.green)
+                    Text(AppLocalizer.format(
+                        .updateAvailableFormat,
+                        version,
+                        language: model.preferences.interfaceLanguage
+                    ))
+                    .font(.subheadline.weight(.semibold))
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: 9))
+                .accessibilityElement(children: .combine)
+            }
+
             Button {
                 model.beginSelection()
             } label: {
@@ -62,6 +79,7 @@ struct MenuBarView: View {
             .controlSize(.small)
         }
         .environment(\.locale, Locale(identifier: model.preferences.interfaceLanguage.localeIdentifier))
+        .onAppear { model.checkForUpdatesIfNeededToday() }
     }
 
     private func quickLanguagePicker(
@@ -90,6 +108,7 @@ struct MenuBarView: View {
 }
 
 struct SettingsView: View {
+    @ObservedObject var model: AppModel
     @ObservedObject var preferences: PreferencesStore
     @ObservedObject var launchAtLogin: LaunchAtLoginService
     @ObservedObject var permissions: PrivacyPermissionStore
@@ -104,10 +123,9 @@ struct SettingsView: View {
     @State private var systemTranslationLanguages: [SystemTranslationLanguageStatus] = []
     @State private var systemTranslationMessage: String?
     @State private var systemTranslationDownloadRequest: SystemTranslationDownloadRequest?
-    @State private var debugIconTapCount = 0
-    @State private var lastDebugIconTap: Date?
+    @State private var debugVersionTapCount = 0
     @State private var isDebugPanelVisible = false
-    @State private var isUpdateSimulationPresented = false
+    @State private var isSimulatedUpdatePromptPresented = false
     @State private var debugPermissionMessage: String?
     @State private var debugCopyMessage: String?
 
@@ -124,11 +142,14 @@ struct SettingsView: View {
                     shortcutSection
                     ocrSection
                     if isDebugPanelVisible { debugSection }
-                    Text(appVersion)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.52))
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 2)
+                    Button(action: registerDebugVersionTap) {
+                        Text(appVersion)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.52))
+                    }
+                    .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 2)
                 }
                 .padding(.horizontal, 30)
                 .padding(.top, 52)
@@ -139,8 +160,11 @@ struct SettingsView: View {
         .preferredColorScheme(.dark)
         .environment(\.locale, Locale(identifier: preferences.interfaceLanguage.localeIdentifier))
         .background(SettingsWindowConfigurator())
-        .sheet(isPresented: $isUpdateSimulationPresented) {
-            UpdateFlowSimulationView(language: preferences.interfaceLanguage)
+        .sheet(isPresented: $isSimulatedUpdatePromptPresented) {
+            SimulatedUpdatePromptView(
+                language: preferences.interfaceLanguage,
+                version: model.availableUpdateVersion ?? "0.5.0"
+            )
         }
         .background {
             if #available(macOS 15.0, *) {
@@ -177,17 +201,10 @@ struct SettingsView: View {
 
     private var appHeader: some View {
         VStack(spacing: 9) {
-            Button(action: registerDebugIconTap) {
-                LingoPrismBrandIcon(size: 82, cornerRadius: 22)
-                    .frame(width: 82, height: 82)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Lingo Prism")
+            LingoPrismBrandIcon(size: 82, cornerRadius: 22)
+                .frame(width: 82, height: 82)
             Text("Lingo Prism")
                 .font(.title3.weight(.bold))
-            Text(appVersion)
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.58))
         }
         .frame(maxWidth: .infinity)
         .padding(.bottom, 3)
@@ -226,15 +243,24 @@ struct SettingsView: View {
                     }
                 }
                 Divider().overlay(.white.opacity(0.09))
-                SettingsRow(icon: "arrow.down.circle", tint: .green, title: t(.checkForUpdates), subtitle: appVersion) {
-                    Button {
-                        AppUpdater.shared.checkForUpdates()
-                    } label: {
-                        Image(systemName: "arrow.up.right")
+                SettingsRow(
+                    icon: "arrow.down.circle",
+                    tint: .green,
+                    title: t(model.availableUpdateVersion == nil ? .checkForUpdates : .updateVersion),
+                    subtitle: model.availableUpdateVersion.map {
+                        AppLocalizer.format(.updateAvailableFormat, $0, language: preferences.interfaceLanguage)
+                    } ?? appVersion
+                ) {
+                    let hasAvailableUpdate = model.availableUpdateVersion != nil
+                    Button(t(hasAvailableUpdate ? .update : .check)) {
+                        if hasAvailableUpdate && model.isSimulatingUpdateAvailable {
+                            isSimulatedUpdatePromptPresented = true
+                        } else {
+                            model.checkForUpdates()
+                        }
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .accessibilityLabel(t(.checkForUpdates))
                 }
             }
         }
@@ -542,13 +568,13 @@ struct SettingsView: View {
             settingsSection(d(.updateTestingSection)) {
                 GlassCard {
                     VStack(alignment: .leading, spacing: 8) {
-                        Button {
-                            isUpdateSimulationPresented = true
-                        } label: {
-                            Label(d(.simulateUpdateFlow), systemImage: "arrow.triangle.2.circlepath")
+                        Toggle(isOn: Binding(
+                            get: { model.isSimulatingUpdateAvailable },
+                            set: { model.setUpdateSimulationEnabled($0) }
+                        )) {
+                            Label(d(.simulateUpdateFlow), systemImage: "arrow.down.circle")
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .toggleStyle(.checkbox)
 
                         Text(d(.simulationNotice))
                             .font(.caption)
@@ -722,16 +748,11 @@ struct SettingsView: View {
         }
     }
 
-    private func registerDebugIconTap() {
-        let now = Date()
-        if let lastDebugIconTap, now.timeIntervalSince(lastDebugIconTap) > 1.5 {
-            debugIconTapCount = 0
-        }
-        lastDebugIconTap = now
-        debugIconTapCount += 1
-        guard debugIconTapCount >= 10 else { return }
+    private func registerDebugVersionTap() {
+        debugVersionTapCount += 1
+        guard debugVersionTapCount >= 10 else { return }
         isDebugPanelVisible = true
-        debugIconTapCount = 0
+        debugVersionTapCount = 0
     }
 
     private func borderColorBinding(_ keyPath: ReferenceWritableKeyPath<PreferencesStore, String>) -> Binding<Color> {
@@ -1028,6 +1049,7 @@ final class SettingsWindowController {
     func show(
         preferences: PreferencesStore,
         launchAtLogin: LaunchAtLoginService,
+        model: AppModel,
         permissions: PrivacyPermissionStore? = nil
     ) {
         if let window, window.isVisible {
@@ -1057,6 +1079,7 @@ final class SettingsWindowController {
         window.standardWindowButton(.zoomButton)?.isHidden = true
         window.contentView = NSHostingView(
             rootView: SettingsView(
+                model: model,
                 preferences: preferences,
                 launchAtLogin: launchAtLogin,
                 permissions: permissions ?? PrivacyPermissionStore()
